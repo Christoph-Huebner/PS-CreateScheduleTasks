@@ -1,4 +1,4 @@
-﻿# -----------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------
 # Header
 # -----------------------------------------------------------------------------------
 # Programname: PS-CreateScheduleTasks 
@@ -9,43 +9,35 @@
 # Changes
 #
 # -----------------------------------------------------------------------------------
-# Parameter
+# Parameters
 # -----------------------------------------------------------------------------------
-# Only messages will displayed if this is set to true => no actions taking place
-[boolean]$DEBUG = $false;
-
-# 
+# Set you windows user name, its needed to login with this account
 [string]$user = "Testuser";
-
-
-[string]$PSscriptA = ""
-
-
-# Set you computername
-[string]$computerName = "MyPC";
-# Get windows key
-#wmic path softwarelicensingservice get OA3xOriginalProductKey;
-[string]$windowsKey = "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
-
-
-
+# Default installation path for PowerShell
+[string]$PSscript = "C:\PS-CreateScheduleTasks\PSScript.ps1";
+# Stored location of the script that should be started with the schedule task
+[string]$PSPath = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
 # -----------------------------------------------------------------------------------
-function createScheduleTask ([string]$scriptPath, [string]$backupAction, $trigger, [string]$scheduleTaskName) {
+# createScheduleTask function
+# -----------------------------------------------------------------------------------
+function createScheduleTask ([string]$scriptPath, [string]$option, $trigger, [string]$scheduleTaskName) {
 
     # Set the script which was called in the task scheduler with the arguments for the special case
-    $arguments = "-WindowStyle Hidden -ExecutionPolicy RemoteSigned -Command &'" + $scriptPath + "' '" + $backupAction + "'";
-    $action = New-ScheduledTaskAction -Execute $b.powershellPath -Argument $arguments;
+    $arguments = "-WindowStyle Hidden -ExecutionPolicy RemoteSigned -Command &'" + $scriptPath + "' '" + $option + "'";
+    $action = New-ScheduledTaskAction -Execute $PSPath -Argument $arguments;
 
-    # Get no trouble if the power supply is on battery, the computer restarts, not depent on idle state or other issues
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -DontStopOnIdleEnd -Disable;
+    # Get no trouble if the power supply is on battery, the computer restarts, not depend on idle state or other issues
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -DontStopOnIdleEnd; #-Disable;
     # Assemble all information the create the schedule task with contains the user name
     Register-ScheduledTask -TaskName $scheduleTaskName -Trigger $trigger -Action $action -User $env:USERNAME -Settings $settings -Force;
 }
 # -----------------------------------------------------------------------------------
+# Main function
+# -----------------------------------------------------------------------------------
 function main() {
 
 
-    Write-Host "Start to configure the backup plans." -ForegroundColor Magenta;
+    Write-Host "Start to configure the schedule tasks." -ForegroundColor Magenta;
     
     # Create the schedule task for a specific windows user
     if ($env:USERNAME -eq $user) {
@@ -54,21 +46,19 @@ function main() {
         [string]$scheduleTaskName = "Start PS script every week"
         Write-Host "Start to create a task schedule '$($scheduleTaskName)'..." -ForegroundColor White;
         $trigger = New-ScheduledTaskTrigger -Weekly -WeeksInterval 1 -DaysOfWeek Thursday -At '06:00PM';
-        createScheduleTask -scriptPath $destination -backupAction "EXT" -trigger $trigger -scheduleTaskName $b.scheduleTaskNameEXTPrivate;
-        $b.showMessage("Finish with creating the task schedule '$($b.scheduleTaskNameEXTPrivate)'.", $b.colorFinishSingleProcess, $true);
+        createScheduleTask -scriptPath $PSscript -option "optionA" -trigger $trigger -scheduleTaskName $scheduleTaskName;
+        Write-Host "Finish with creating the schedule task '$($scheduleTaskName)'..." -ForegroundColor DarkGreen;
 
-        # Create a daily schedule task
-        $b.showMessage("Start to create a task schedule '$($b.scheduleTaskNameDBPWPrivate)'...", $b.colorStartSingleProcess, $true);
+        # Create a daily (at 07:00 PM) schedule task 
+        [string]$scheduleTaskName = "Start PS script every day"
+        Write-Host "Start to create a task schedule '$($scheduleTaskName)'..." -ForegroundColor White;
         $trigger = New-ScheduledTaskTrigger -Daily -At '07:00PM';
-        createScheduleTask -scriptPath $destination -backupAction "DBPWPrivate" -trigger $trigger -scheduleTaskName $b.scheduleTaskNameDBPWPrivate;
-        $b.showMessage("Finish with creating the task schedule '$($b.scheduleTaskNameDBPWPrivate)'.", $b.colorFinishSingleProcess, $true);
+        createScheduleTask -scriptPath $PSscript -option "optionB" -trigger $trigger -scheduleTaskName $scheduleTaskName;
+        Write-Host "Finish with creating the schedule task '$($scheduleTaskName)'..." -ForegroundColor DarkGreen;
     }
-    
-
-    Write-Host "`nFinish the configuration of the backup plans.`n" -ForegroundColor DarkGray;
+    Write-Host "`nFinish the configuration of the schedule tasks.`n" -ForegroundColor DarkGray;
 }
-
-
+# Entry point for the main function
 try {
 
     main;
